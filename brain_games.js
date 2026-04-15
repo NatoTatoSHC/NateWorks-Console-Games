@@ -62,6 +62,7 @@ var trivia = {
                         this.echo()
                     }
                     this.echo("Score: "+correct+"/"+testLength);
+                    await this.read("Press Enter To Continue...");
                     this.pop();
                     this.reset();
                 }
