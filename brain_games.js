@@ -22,6 +22,24 @@ var trivia = {
                             "Hammer"
                         ],
                         "answer":1,
+                    },
+                    "racoons": {
+                        "possible": [
+                            "Gaze",
+                            "Rustle",
+                            "Garbage",
+                            "Herd"
+                        ],
+                        "answer":0
+                    },
+                    "hyenas": {
+                        "possible": [
+                            "Gang",
+                            "Laugh",
+                            "Jump",
+                            "Cackle"
+                        ],
+                        "answer":3
                     }
                 }
             }
