@@ -19,6 +19,7 @@ Type "games all" to start
         </template>
         </div>
         <script src="./brain_games.js"></script>
+        <script src="./arcade_games.js"></script>
         <script>
             $(function () {
                 function save(info, id) {
@@ -38,6 +39,10 @@ Type "games all" to start
                     },
                     "brain":{
                         "Trivia":trivia
+                    },
+                    "arcade":{
+                        "HashtagEater": hashtagEater,
+                        "BombDodger": bombDodger
                     },
                     "math":{
                         "Add":{
@@ -89,7 +94,7 @@ Type "games all" to start
                         } else {
                             Object.keys(games[category]).forEach(game => {
                                 this.echo(game + " ------- Id: " + category+"."+game)
-                            })
+                            });
                         }
                         this.echo()
                         this.echo("Type \"play <enter id here>\" to play a game.")
@@ -107,7 +112,7 @@ Type "games all" to start
                             return
                         }
                         if (!games[gamePath[0]][gamePath[1]]) {
-                            this.error("game "+gamePath[1]+" does not exist in category "+gamePath[0]);
+                            this.error("Game "+gamePath[1]+" does not exist in category "+gamePath[0]);
                             return
                         }
                         this.clear();

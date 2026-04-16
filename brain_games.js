@@ -85,6 +85,10 @@ var trivia = {
                     this.reset();
                 }
             });
+            int.games = function () {
+                Object.keys(games).forEach(game => this.echo(game));
+                this.echo();
+            }
             return int;
         }
         term.push(commandGenerator());
