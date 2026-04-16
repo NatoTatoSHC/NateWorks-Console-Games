@@ -79,13 +79,51 @@ var hashtagEater = {
 }
 var bombDodger = {
     "play": async function (term, id) {
+        term.on("keydown", (e) => {
+            switch(e.key) {
+                case 'd':
+                    if (player.x < game.width - 1) {
+                        player.xVel = 1;
+                    }
+                    break;
+                case 'a':
+                    if (player.x > 0) {
+                        player.xVel = -1;
+                    }
+                    break;
+                case 'w':
+                    if (grid[player.y+1][player.x] == "I") {
+                        player.accel = -3;
+                        player.y -= 1;
+                    }
+                    break;
+                case 'x':
+                    clearInterval(loop);
+                    term.off("keydown");
+                    term.off("keyup");
+                    term.reset();
+                    break;
+            }
+        });
+        term.on("keyup", (e) => {
+            switch(e.key) {
+                case 'd':
+                    player.xVel = 0;
+                    break;
+                case 'a':
+                    player.xVel = 0;
+                    break;
+            }
+        })
         var game = {
             width: term.cols(),
             height: term.rows()
         }
         var player = {
             x: 0,
-            y: 0
+            y: 0,
+            accel: 1,
+            xVel: 0
         };
         var ground = {
             height: 10,
@@ -95,6 +133,7 @@ var bombDodger = {
             },
             grid:[]
         };
+        var bombs = [{x: 10, y: 0}];
         ground.grid = generateGround(ground)
         var grid = [];
         function generateGround(ground) {
@@ -105,7 +144,7 @@ var bombDodger = {
             }
             return retGrid;
         }
-        function generateGrid(player, ground) {
+        function generateGrid(player, ground, bombs) {
             let retGrid = [];
             for (let i = 0; i < game.height; i++) {
                 let str = " ".repeat(game.width);
@@ -115,18 +154,49 @@ var bombDodger = {
                 if (player.y == i) {
                     str = str.slice(0, player.x)+"@"+str.slice(player.x+1);
                 }
+                bombs.forEach(bomb => {
+                    if (i == bomb.y) {
+                        str = str.slice(0, bomb.x)+"*"+str.slice(bomb.x+1);
+                    }
+                })
                 retGrid.push(str);
             }
             return retGrid;
         }
+grid = generateGrid(player, ground, bombs);
 
         function update() {
-            //Player Fall
-            if (grid[player.y+1][player.x] == " ") {
-                player.y += 1;
+            //Hit Top
+            if (player.y < 0) {
+                player.y = 0;
+                player.accel = 1;
+                grid = generateGrid(player, ground, bombs);
             }
 
-            grid = generateGrid(player, ground);
+            //Player Fall
+            if (grid[player.y+1][player.x] == " ") {
+                player.y += player.accel;
+            }
+            if (player.accel < 1) {
+                player.accel += 1;
+            }
+
+            //Player MOve
+            if (((player.x > 0 && player.xVel == -1) || (player.x < game.width - 1 && player.xVel == 1))) {
+                if ((player.x > 0 && player.xVel == -1 && grid[player.y][player.x-1] == " ") || (player.x < game.width - 1 && player.xVel == 1 && grid[player.y][player.x+1] == " "))
+                player.x += player.xVel;
+            }
+
+            //Bomb drop
+            bombs.forEach(bomb => {
+                bomb.y += 1;
+                if (grid[bomb.y+1][bomb.x] == "I") {
+                    ground.grid[bomb.y+1-ground.pos.y] = ground.grid[bomb.y+1-ground.pos.y].slice(0, bomb.x-2) + "     "+ground.grid[bomb.y+1-ground.pos.y].slice(bomb.x+3);
+                    delete bombs[bombs.indexOf(bomb)];
+                }
+            });
+
+            grid = generateGrid(player, ground, bombs);
             draw();
         }
         function draw() {
