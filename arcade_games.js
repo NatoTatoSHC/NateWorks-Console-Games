@@ -295,7 +295,12 @@ var amperShoot = {
     "play": function (term, id) {
         //CONSTS
         const characters = {
-            player: "@"
+            player: "@",
+            air: " ",
+            bullet: {
+                x: "-",
+                y: "|"
+            }
         }
         var game = {
             width: term.cols(),
@@ -306,28 +311,109 @@ var amperShoot = {
         //SETUP
         var player = {
             x:0,
-            y: 0
+            y: 0,
+            velocity: {
+                x: 0,
+                y: 0
+            },
+            shooting: false,
+            bullets: [],
+            shootTimeout: 0
         };
+        var grid = generateGrid();
 
         //FUNCTIONS
+        function generateGrid() {
+            let ret = [];
+            for (let i = 0; i < game.height; i++) {
+                let str = characters.air.repeat(game.width);
+                if (i == player.y) {
+                    str = str.slice(0, player.x) + characters.player + str.slice(characters.player + 1);
+                }
+                ret.push(str);
+            }
+            return ret;
+        }
+
 
         //EVENTS
+        term.on("keydown", (e) => {
+            switch(e.key) {
+                case 's':
+                    player.velocity.y = 1;
+                    break;
+                case 'w':
+                    player.velocity.y = -1;
+                    break;
+                case 'a':
+                    player.velocity.x = -1;
+                    break;
+                case 'd':
+                    player.velocity.x = 1;
+                    break;
+                case 'e':
+                    player.shooting = true;
+                    break;
+
+            }
+        });
+        term.on("keyup", (e) => {
+            if (['w', 's'].includes(e.key)) {
+                player.velocity.y = 0;
+            } else if (['a', 'd'].includes(e.key)) {
+                player.velocity.x = 0;
+            } else if (e.key == "e") {
+                player.shooting = false;
+            }
+        });
 
         //LOOP
         function loop() {
             update();
             draw();
         }
-        var timer = setInterval(loop, 1000/fps);
+        var timer = setInterval(loop, 1000/game.fps);
 
         //UPDATE
         function update() {
+            //Player Movement
+            //Up Down
+            let letYMove = (player.velocity.y > 0 && player.y < game.height - 1) || (player.velocity.y < 0 && player.y > 0);
+            if (letYMove) {
+                player.y += player.velocity.y;
+            }
+            //Left Right
+            let letXMove = (player.velocity.x > 0 && player.x < game.width - 1) || (player.velocity.x < 0 && player.x > 0);
+            if (letXMove) {
+                player.x += player.velocity.x;
+            }
+            
+            //Shooting
+            if (player.velocity.x && player.shooting && player.shootTimeout <= 0) {
+                let newBullet = {
+                    character: characters.bullet.x,
+                    x: player.x,
+                    y: player.y,
+                    velocity: {
+                        x: player.velocity.x,
+                        y: 0
+                    }
+                };
+                player.bullets.push(newBullet);
+                player
+            }
 
         }
 
         //DRAW
         function draw() {
-            
+            grid = generateGrid();
+            term.clear();
+            term.set_command("");
+            for (l in grid) {
+                term.echo(grid[l]);
+            }
+
         }
 
     }
