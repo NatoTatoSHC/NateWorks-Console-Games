@@ -17,6 +17,7 @@
                                                                                 v 1.0
 Type "games all" to start                                                                      
         </template>
+        <audio hidden id="explode" src="./explode.mp3"></audio>
         </div>
         <script src="./brain_games.js"></script>
         <script src="./arcade_games.js"></script>
@@ -128,11 +129,25 @@ Type "games all" to start
                         let info = await res.text();
                         eval(info);
                         games.import[name] = getData();
+                    },
+                    "config": function(id, setting, value) {
+                        let locDataRaw = localStorage.getItem(id+".config");
+                        if (!locDataRaw) {
+                            this.error("Game "+id+" does not have any configurations.");
+                            return;
+                        }
+                        let locData = JSON.parse(locDataRaw);
+                        if (locData[setting] == undefined) {
+                            this.error("Game "+id+" has no setting "+setting+".");
+                            return;
+                        }
+                        locData[setting] = value;
+                        localStorage.setItem(id+".config", JSON.stringify(locData));
                     }
                 },{
                     "greetings":greet.innerHTML
-                })
-            })
+                });
+            });
         </script>
     </body>
 </html>
