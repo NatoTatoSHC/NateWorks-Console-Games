@@ -293,6 +293,42 @@ var bombDodger = {
 var pingloushay = {};
 var amperShoot = {
     "play": function (term, id) {
+        //CONSTS
+        const characters = {
+            player: "@"
+        }
+        var game = {
+            width: term.cols(),
+            height: term.rows() - 2,
+            fps: 60
+        }
+
+        //SETUP
+        var player = {
+            x:0,
+            y: 0
+        };
+
+        //FUNCTIONS
+
+        //EVENTS
+
+        //LOOP
+        function loop() {
+            update();
+            draw();
+        }
+        var timer = setInterval(loop, 1000/fps);
+
+        //UPDATE
+        function update() {
+
+        }
+
+        //DRAW
+        function draw() {
+            
+        }
 
     }
 }
