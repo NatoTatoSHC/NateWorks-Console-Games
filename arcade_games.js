@@ -300,13 +300,17 @@ var amperShoot = {
             bullet: {
                 x: "-",
                 y: "|"
-            }
+            },
+            ampersand: "&"
         }
         var game = {
             width: term.cols(),
             height: term.rows() - 2,
             fps: 60
         }
+        const shootCooldown = 30;
+        const maxAmpersands = 5;
+        const ampersandMovementPause = 10;
 
         //SETUP
         var player = {
@@ -316,29 +320,77 @@ var amperShoot = {
                 x: 0,
                 y: 0
             },
-            shooting: false,
             bullets: [],
             shootTimeout: 0
         };
         var grid = generateGrid();
+        var ampersands = [];
+        var iteration = 0;
 
         //FUNCTIONS
         function generateGrid() {
             let ret = [];
             for (let i = 0; i < game.height; i++) {
                 let str = characters.air.repeat(game.width);
+                player.bullets.forEach(bullet => {
+                    if (i == bullet.y) {
+                        str = str.slice(0, bullet.x) + bullet.character + str.slice(bullet.x + 1);
+                    }
+                });
+                for (a in ampersands) {
+                    let ampersand = ampersands[a];
+                    if (i == ampersand.y) {
+                        str = str.slice(0, ampersand.x) + characters.ampersand + str.slice(ampersand.x + 1);
+                    }
+                }
                 if (i == player.y) {
-                    str = str.slice(0, player.x) + characters.player + str.slice(characters.player + 1);
+                    str = str.slice(0, player.x) + characters.player + str.slice(player.x + 1);
                 }
                 ret.push(str);
             }
             return ret;
+        }
+        function exit() {
+            clearInterval(timer);
+            term.off("keydown");
+            term.off("keyup");
+            setTimeout(() => {term.reset();}, 500)
         }
 
 
         //EVENTS
         term.on("keydown", (e) => {
             switch(e.key) {
+                case 'e':
+                    if (player.velocity.x != 0 && player.velocity.y == 0 && player.shootTimeout <= 0) {
+                        let newBullet = {
+                            character: characters.bullet.x,
+                            x: player.x,
+                            y: player.y,
+                            velocity: {
+                                x: player.velocity.x * 2,
+                                y: 0
+                            }
+                        };
+                        player.bullets.push(newBullet);
+                        player.shootTimeout  = shootCooldown;
+                    } else if (player.velocity.y != 0 && player.velocity.x == 0 && player.shootTimeout <= 0) {
+                        let newBullet = {
+                            character: characters.bullet.y,
+                            x: player.x,
+                            y: player.y,
+                            velocity: {
+                                x: 0,
+                                y: player.velocity.y * 2
+                            }
+                        };
+                        player.bullets.push(newBullet);
+                        player.shootTimeout  = shootCooldown;
+                    }
+                    break;
+                case 'x':
+                    exit();
+                    break;
                 case 's':
                     player.velocity.y = 1;
                     break;
@@ -351,24 +403,24 @@ var amperShoot = {
                 case 'd':
                     player.velocity.x = 1;
                     break;
-                case 'e':
-                    player.shooting = true;
-                    break;
 
             }
         });
         term.on("keyup", (e) => {
             if (['w', 's'].includes(e.key)) {
                 player.velocity.y = 0;
-            } else if (['a', 'd'].includes(e.key)) {
+            }
+            if (['a', 'd'].includes(e.key)) {
                 player.velocity.x = 0;
-            } else if (e.key == "e") {
+            }
+            if (e.key == "e") {
                 player.shooting = false;
             }
         });
 
         //LOOP
         function loop() {
+            iteration += 1;
             update();
             draw();
         }
@@ -389,18 +441,70 @@ var amperShoot = {
             }
             
             //Shooting
-            if (player.velocity.x && player.shooting && player.shootTimeout <= 0) {
-                let newBullet = {
-                    character: characters.bullet.x,
-                    x: player.x,
-                    y: player.y,
-                    velocity: {
-                        x: player.velocity.x,
-                        y: 0
-                    }
+            player.shootTimeout -= 1;            
+
+            //Bullet Movement
+            for (b in player.bullets) {
+                let bullet = player.bullets[b];
+                bullet.x += bullet.velocity.x;
+                bullet.y += bullet.velocity.y;
+                if (bullet.velocity.x && (bullet.x <= 0 || bullet.x >= game.width - 1)) {
+                    player.bullets.splice(b, 1);
+                } else if (bullet.velocity.y && (bullet.y <= 0 || bullet.y >= game.height - 1)) {
+                    player.bullets.slice(b, 1);
+                }
+            }
+
+            //Ampersand Spawner
+            if (ampersands.length < maxAmpersands) {
+                //Choose Wall
+                let bitX = Math.round(Math.random());
+                let bitY = 0;
+                if (bitX == 0) {bitY = 1;} else {bitY = 0;}
+                //Create Ampersand
+                let newAmpersand = {
+                    x: bitX * Math.round(Math.random()*game.width - 1),
+                    y: bitY * Math.round(Math.random()*game.height - 1)
                 };
-                player.bullets.push(newBullet);
-                player
+                if (newAmpersand.x != 0 || newAmpersand.y != 0) {
+                    ampersands.push(newAmpersand);
+                }
+            }
+
+            //Ampersand Update
+            for (a in ampersands) {
+                let ampersand = ampersands[a];
+                //Ampersand AI
+                if ((iteration % ampersandMovementPause) === 0) {
+                    let xRel = ampersand.x - player.x;
+                    let yRel = ampersand.y - player.y;
+                    let xDis = Math.abs(xRel);
+                    let yDis = Math.abs(yRel);
+                    if (xDis > yDis && xRel) {
+                        ampersand.x -= (xRel / Math.abs(xRel));
+                    } else if (yRel) {
+                        ampersand.y -= (yRel / Math.abs(yRel));
+                    }
+                    
+                }
+
+                //Ampersand Death
+                for (b in player.bullets) {
+                    let bullet = player.bullets[b];
+                    if (bullet.velocity.x && (bullet.x == ampersand.x || bullet.x + 1 == ampersand.x) && bullet.y == ampersand.y) {
+                        player.bullets.splice(b, 1);
+                        ampersands.splice(a, 1);
+                    }
+                    if (bullet.velocity.y && bullet.x == ampersand.x && (bullet.y == ampersand.y || bullet.y + 1 == ampersand.y)) {
+                        player.bullets.splice(b, 1);
+                        ampersands.splice(a, 1);
+                    }
+                }
+
+                //Player Killing
+                if (player.x == ampersand.x && player.y == ampersand.y) {
+                    exit();
+                }
             }
 
         }
@@ -416,5 +520,145 @@ var amperShoot = {
 
         }
 
+    }
+}
+var superNateJumper = {
+    "play": function (term, id){
+        //CONSTS
+        const game = {
+            width: term.cols(),
+            height: term.rows() - 3,
+            fps: 60
+        };
+        const characters = {
+            air: " "
+        }
+        //SETUP
+        var grid = generateGrid();
+        var iteration = 0;
+        //FUNCTIONS
+        function addRenderer(str, index, character) {
+            return str.slice(0, index) + character + str.slice(index + 1);
+        }
+        function generateGrid() {
+            let ret = [];
+            for (let i = 0; i < game.height; i++) {
+                let str = characters.air.repeat(game.width);
+                // -- Add Renderers Here --
+                ret.push(str);
+            }
+            return ret;
+        }
+        function exit() {
+            clearInterval(timer);
+            term.off("keydown");
+            term.off("keyup");
+            setTimeout(() => {
+                term.reset();
+            }, 500);
+        }
+        //EVENTS
+        term.on("keydown", (e) => {
+            switch(e.key) {
+                case 'x':
+                    exit();
+                    break;
+                // -- Add key down events here --
+            }
+        });
+        term.on("keyup", (e) => {
+            switch(e.key) {
+                // -- Add key up events here --
+            }
+        });
+        //LOOP
+        function loop() {
+            iteration++;
+            update();
+            draw();
+        }
+        var timer = setInterval(loop, 1000/game.fps);
+        //UPDATE
+        function update() {
+            // -- Add Any Updates --
+        }
+        //DRAW
+        function draw() {
+            term.set_command("");
+            term.clear();
+            term.echo("Press x to exit");
+            for (line in grid) {
+                term.echo(grid[line]);
+            }
+        }
+    }
+}
+
+var def = {
+    "play": function (term, id){
+        //CONSTS
+        const game = {
+            width: term.cols(),
+            height: term.rows() - 3,
+            fps: 60
+        };
+        const characters = {
+            air: " "
+        }
+        //SETUP
+        var grid = generateGrid();
+        var iteration = 0;
+        //FUNCTIONS
+        function generateGrid() {
+            let ret = [];
+            for (let i = 0; i < game.height; i++) {
+                let str = characters.air.repeat(game.width);
+                // -- Add Renderers Here --
+                ret.push(str);
+            }
+            return ret;
+        }
+        function exit() {
+            clearInterval(timer);
+            term.off("keydown");
+            term.off("keyup");
+            setTimeout(() => {
+                term.reset();
+            }, 500);
+        }
+        //EVENTS
+        term.on("keydown", (e) => {
+            switch(e.key) {
+                case 'x':
+                    exit();
+                    break;
+                // -- Add key down events here --
+            }
+        });
+        term.on("keyup", (e) => {
+            switch(e.key) {
+                // -- Add key up events here --
+            }
+        });
+        //LOOP
+        function loop() {
+            iteration++;
+            update();
+            draw();
+        }
+        var timer = setInterval(loop, 1000/game.fps);
+        //UPDATE
+        function update() {
+            // -- Add Any Updates --
+        }
+        //DRAW
+        function draw() {
+            term.set_command("");
+            term.clear();
+            term.echo("Press x to exit");
+            for (line in grid) {
+                term.echo(grid[line]);
+            }
+        }
     }
 }
